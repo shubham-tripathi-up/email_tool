@@ -1,0 +1,522 @@
+// *********************Combined Charts Generator Method/function***************************** 
+
+function createCombinedLineChart(labels, data1, data2, data3, title) {
+
+   var chartBuilder = Charts.newLineChart()
+    .setTitle(title)
+    .setXAxisTitle('Months') // Updated x-axis title
+    .setYAxisTitle('Percentage (→)')
+    .setDimensions(600, 500) // Adjusted to a more common dimension for clarity
+    .setLegendPosition(Charts.Position.BOTTOM)
+    .setOption('legend', { 
+      position: 'top', 
+      alignment: 'start', // Aligns legend to the start (left) which might encourage a more stacked layout
+      textStyle: { 
+        fontSize: 10 // Reduces the legend text size
+      }
+    })
+    .setOption('vAxis', {
+      format: 'percent',
+      title: 'Percentage (→)',
+      textStyle: { bold: true },//making evaluations name bold
+      ticks: Array.from({ length: 11 }, (_, i) => ({ v: i * 0.1, f: `${i * 10}%` }))
+    })
+    .setOption('hAxis', {
+      title: 'Months (→)', // Updated x-axis title
+      textStyle: { bold: true },
+      ticks: Array.from({ length: 11 }, (_, i) => ({ v: i * 0.1, f: `${i * 10}%` })),
+      slantedText: true, // Enable slanted text
+      slantedTextAngle: 45 // Rotate the text by 45 degrees
+    })
+    .setOption('pointSize', 5)
+    .setOption('colors', ['blue', 'green', 'orange']); // Ensuring colors are set for all three lines
+
+  var dataTable = Charts.newDataTable();
+  dataTable.addColumn(Charts.ColumnType.STRING, 'Month');
+  dataTable.addColumn(Charts.ColumnType.NUMBER, 'Attendance');
+  dataTable.addColumn(Charts.ColumnType.NUMBER, 'Assignment Attempted');
+  dataTable.addColumn(Charts.ColumnType.NUMBER, 'Assignment Submitted');
+
+  labels.forEach(function(label, index) {
+    dataTable.addRow([label, data1[index], data2[index], data3[index]]);
+  });
+
+  chartBuilder.setOption('series', {
+    0: { color: 'blue', visibleInLegend: true },
+    1: { color: 'green', visibleInLegend: true },
+    2: { color: 'orange', visibleInLegend: true }
+  }); // Explicitly setting series options to ensure all lines are visible
+
+  chartBuilder.setDataTable(dataTable.build());
+  var chart = chartBuilder.build();
+  return chart.getAs('image/png');
+}
+
+// *********************Evaluation Chart Generator Method/function*****************************
+
+function createEvaluationLineChart(labels, evaluationData, title) {
+
+
+ 
+  var chartBuilder = Charts.newLineChart()
+    .setTitle(title)
+    .setXAxisTitle('Evaluations')
+    .setYAxisTitle('Evaluation Scores')
+    .setDimensions(600, 500)
+    .setLegendPosition(Charts.Position.BOTTOM)
+    .setOption('colors', ['red'])
+    .setOption('pointSize', 5)
+    .setOption('legend', { 
+      position: 'top', 
+      alignment: 'start', // Aligns legend to the start (left) which might encourage a more stacked layout
+      textStyle: { 
+        fontSize: 5 // Reduces the legend text size
+      }
+    })
+    .setOption('hAxis', {
+      title: 'Evaluations (→)', // Updated x-axis title
+       textStyle: { bold: true },//making evaluations name bold
+      ticks: Array.from({ length: 11 }, (_, i) => ({ v: i * 0.1, f: `${i * 10}%` })),
+      slantedText: true, // Enable slanted text
+      slantedTextAngle: 45 // Rotate the text by 45 degrees
+    })
+    .setOption('vAxis', {
+      format: 'percent',
+      title: 'Evaluation Scores (→)',
+       textStyle: { bold: true },//making evaluations name bold
+      ticks: Array.from({ length: 10 }, (_, i) => ({ v: i + 1, f: `${i + 1}` }))
+    });
+  
+  var dataTable = Charts.newDataTable();
+  dataTable.addColumn(Charts.ColumnType.STRING, 'Month');
+  dataTable.addColumn(Charts.ColumnType.NUMBER, 'Evaluation Score');
+
+  labels.forEach(function(label, index) {
+    dataTable.addRow([label, evaluationData[index]]);
+  });
+
+  chartBuilder.setDataTable(dataTable.build());
+  var chart = chartBuilder.build();
+  return chart.getAs('image/png');
+}
+
+// *********************Time Stamp Generator Method/function*****************************
+
+function addTimestampFooter(doc) {
+        var footer = doc.addFooter(); // This creates a footer or gets an existing one
+        var date = new Date();
+
+        var options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+
+        var dateString = date.toLocaleDateString('en-US', options);
+
+        let discliamer= "Disclaimer: \n 1. Evaluation Scores & Project Scores are calculated on the scale of 10.\n 2. Attendance & assignment attempted/Submitted are calculated on the scale of 100.\n"
+        
+        footer.appendParagraph(discliamer);
+
+        footer.appendParagraph(dateString).setAlignment(DocumentApp.HorizontalAlignment.RIGHT);
+}
+
+// ****************************test Logo ******************************************
+
+  function insertLogoAtPageStart(body, imageUrl) {
+    var imageBlob = UrlFetchApp.fetch(imageUrl).getBlob();
+    var image = body.appendImage(imageBlob);
+    adjustImageSize(image);
+    body.appendParagraph(""); // Add a small buffer (empty paragraph) after the image
+  }
+
+// ********************************Image size modification
+
+  function adjustImageSize(image) {
+    var logoWidth = 100; // Set the desired width or use your own logic to determine it
+    var aspectRatio = image.getWidth() / image.getHeight();
+    image.setWidth(logoWidth);
+    image.setHeight(logoWidth / aspectRatio);
+  }
+
+
+function sendEmailsWithAttendanceChartsAsPDF() {
+
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("MAIL DATA");
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var emailIndex = headers.indexOf('email');
+  var emailFlagIndex = headers.indexOf('Email Flag');
+
+  var attendanceStartIndex = headers.indexOf('August-2023 Attendance');
+  var attendanceEndIndex = headers.indexOf('February-2024 Attendance');
+  var assignmentAttemptStartIndex = headers.indexOf('August-2023 Assignment Attempted');
+  var assignmentAttemptEndIndex = headers.indexOf('February-2024 Assignment Attempted');
+  var assignmentSubmittedStartIndex = headers.indexOf('August-2023 Assignment Submitted');
+  var assignmentSubmittedEndIndex = headers.indexOf('February-2024 Assignment Submitted');
+  var evaluationStartIndex = headers.indexOf('August-2023 Evaluation');
+  var evaluationEndIndex = headers.indexOf('December-2023 Evaluation');
+  var evaluationDateStartIndex = evaluationEndIndex + 1;
+  var evaluationDateEndIndex = evaluationDateStartIndex + (evaluationEndIndex - evaluationStartIndex);
+
+   //  project variables
+  var projectStartIndex=headers.indexOf('Project 1 Score');
+  var projectEndIndex=headers.indexOf('Project 1 Score');
+
+  //  Interview variables
+  var interviewStartIndex=headers.indexOf('Online 1 Interview');
+  var interviewEndIndex=headers.indexOf('Online 1 Interview');
+
+  //  Mss variables
+  var mssStartIndex=headers.indexOf('MSS Score');
+  var mssEndIndex=headers.indexOf('MSS Score');
+  
+//--------------------------------Folder Name Creation------------------------------------------
+
+  var rootFolder = DriveApp.getRootFolder();
+  var overallPerformanceFolder = createOrGetFolder(rootFolder, 'overall_performance ');
+  var webSubfolder = createOrGetFolder(overallPerformanceFolder, 'cap_06_final')
+
+  for (var i = 1; i < data.length; i++) {
+    var row0 = data[i];
+    var emailAddress = row0[emailIndex];
+    var emailFlag = String(row0[emailFlagIndex]).toLowerCase();
+
+    if (emailFlag === 'true' || emailFlag === 'TRUE') continue;
+
+    var months = headers.slice(attendanceStartIndex, attendanceEndIndex + 1);
+    var evalNames= headers.slice(evaluationStartIndex,evaluationEndIndex+1);
+    var evalScores=row0.slice(evaluationStartIndex,evaluationEndIndex+1);
+    var evalDates = row0.slice(evaluationDateStartIndex, evaluationDateEndIndex + 1);
+    var attendance = row0.slice(attendanceStartIndex, attendanceEndIndex + 1);
+    var assignmentAttempted = row0.slice(assignmentAttemptStartIndex, assignmentAttemptEndIndex + 1);
+    var assignmentSubmitted = row0.slice(assignmentSubmittedStartIndex, assignmentSubmittedEndIndex + 1);
+    var evaluation = row0.slice(evaluationStartIndex, evaluationEndIndex + 1);
+
+     var project= headers.slice(projectStartIndex,projectEndIndex + 1);
+    var projectScore= row0.slice(projectStartIndex,projectEndIndex + 1);
+
+    // interview
+    var interview= headers.slice(interviewStartIndex,interviewEndIndex + 1);
+    var interviewScore= row0.slice(interviewStartIndex,interviewEndIndex + 1);
+
+    // interview
+    // var mss= headers.slice(mssStartIndex,mssEndIndex + 1);
+    // var mssScore= row0.slice(mssStartIndex,mssEndIndex + 1);
+
+
+    var doc = DocumentApp.create('TempChartDocFor' + row0[0]);
+
+// *******************************Header Logo*************************************************************
+
+    var header = doc.getHeader() || doc.addHeader();
+    var imageUrl = 'https://coding-platform.s3.amazonaws.com/dev/lms/tickets/assignmentId/34764/problemId/32522/2csCmtHIVrizepjn.png';
+    var imageBlob = UrlFetchApp.fetch(imageUrl).getBlob();
+    var headerImage = header.insertImage(0, imageBlob);
+    adjustImageSize(headerImage);
+
+// ......................document body created...............................
+    var body = doc.getBody();
+
+
+var name = row0[headers.indexOf('name')] || 'N/A'; // Default to 'N/A' if value is null/undefined
+var batch = row0[headers.indexOf('batch')] || 'N/A';
+var studentCode = row0[headers.indexOf('student code')] || 'N/A';
+var overallAttendance = row0[headers.indexOf('Overall Attendance')]?.toString() || 'N/A';
+var overallAssignmentAttempt = row0[headers.indexOf('Overall Assingment Attempt')]?.toString() || 'N/A';
+var overallAssignmentSubmission = row0[headers.indexOf('Overall AssingmentSubmisison')]?.toString() || 'N/A';
+
+// *************************************OVERALL PERFORMANCE SECTION***********************************************
+
+    //-------------------------------------OVERALL PERFORMANCE HEADING-------------------------------
+
+        var mainHeading = body.appendTable();
+        var row = mainHeading.appendTableRow();
+        var cell = row.appendTableCell("OVERALL PROGRESS REPORT TILL 29 FEB 2024");
+        cell.setBold(true);
+        cell
+          .getChild(0)
+          .asParagraph()
+          .setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+        cell.setBackgroundColor("#ffffff"); // Hex code for lightblue
+
+  //------------------------OVERALL PERFORMANCE TABLE---------------------------------------------
+
+    var projectsTable = body.appendTable();
+    var row = projectsTable.appendTableRow();
+    var cell = row.appendTableCell("OVERALL PERFORMANCE");
+    cell.setBold(true);
+    cell
+      .getChild(0)
+      .asParagraph()
+      .setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+    cell.setBackgroundColor("#ADD8E6"); // Hex code for blue
+
+    var overallAttendancePercentage = (parseFloat(overallAttendance) * 100).toFixed(2) + "%";
+    var overallAssignmentAttemptPercentage = (parseFloat(overallAssignmentAttempt) * 100).toFixed(2) + "%";
+    var overallAssignmentSubmissionPercentage = (parseFloat(overallAssignmentSubmission) * 100).toFixed(2) + "%";
+
+    var overallPerformanceTableData = [
+      [
+        "Name",
+        "Batch",
+        "Student Code",
+        "Overall Attendance",
+        "Overall Assignment Attempt",
+        "Overall Assignment Submission",
+      ],
+      [
+        name,
+        batch,
+        studentCode,
+        overallAttendancePercentage,
+        overallAssignmentAttemptPercentage,
+        overallAssignmentSubmissionPercentage,
+      ],
+    ];
+
+
+    let overallPerformanceTable = body.appendTable();
+
+    for (let i = 0; i < overallPerformanceTableData.length; i++) {
+
+      let row = overallPerformanceTable.appendTableRow();
+
+
+      for (let j = 0; j < overallPerformanceTableData[i].length; j++) {
+        
+          let cell = row.appendTableCell(overallPerformanceTableData[i][j]);
+
+        cell
+          .getChild(0)
+          .asParagraph()
+          .setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+      }
+    }
+
+    //line spacing
+body.appendParagraph("");
+
+
+
+// //****************************************MSS SECTION *********************************************
+//     //----------------------------------------MSS TABLE HEADING-----------------------------------------
+
+//     var projectsTable = body.appendTable();
+//     var row = projectsTable.appendTableRow();
+//     var cell = row.appendTableCell("test Skill Score (MSS)");
+//     cell.setBold(true);
+//     cell
+//       .getChild(0)
+//       .asParagraph()
+//       .setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+//     cell.setBackgroundColor("#ADD8E6"); // Hex code for yellow
+
+//    //--------------------------------------MSS Table----------------------------------------
+
+
+//       var mssTableData = [];
+
+//       for (var j = 0; j < mss.length; j++) {
+//         // Ensure all values are converted to strings
+//         var mssName = 'test Skill Score'; // Assuming project names are like "Project 1", "Project 2", etc.
+//         var scoreMss = mssScore[j].toString(); // Convert score to string
+
+//         mssTableData.push([mssName, scoreMss]);
+//       }
+
+//       let mssTable = body.appendTable();
+    
+//         for (let i = 0; i < mssTableData.length; i++) {
+//           let row = mssTable.appendTableRow();
+//           for (let j = 0; j < mssTableData[i].length; j++) {
+//             let cell = row.appendTableCell(mssTableData[i][j]);
+//             cell.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+//           }
+// }
+
+  //****************************************PROJECT SECTION *********************************************
+    //----------------------------------------PROJECT TABLE HEADING-----------------------------------------
+
+    var projectsTable = body.appendTable();
+    var row = projectsTable.appendTableRow();
+    var cell = row.appendTableCell("Projects");
+    cell.setBold(true);
+    cell
+      .getChild(0)
+      .asParagraph()
+      .setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+    cell.setBackgroundColor("#ADD8E6"); // Hex code for yellow
+
+   //--------------------------------------PROJECT Table----------------------------------------
+
+
+      var table = [['Projects', 'Project Score']];
+
+      for (var j = 0; j < project.length; j++) {
+        // Ensure all values are converted to strings
+        var projectName = 'Project ' + (j + 1); // Assuming project names are like "Project 1", "Project 2", etc.
+        var projectscore = projectScore[j].toString(); // Convert score to string
+
+        table.push([projectName, projectscore]);
+      }
+
+      let projecTable = body.appendTable();
+    
+        for (let i = 0; i < table.length; i++) {
+          let row = projecTable.appendTableRow();
+          for (let j = 0; j < table[i].length; j++) {
+            let cell = row.appendTableCell(table[i][j]);
+            cell.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+          }
+}
+
+// // *********************************INTERVIEW SECTION****************************************************
+
+//  // ---------------------------------INTERVIEW TABLE HEADING---------------------------------------------
+
+
+//     var projectsTable = body.appendTable();
+//         var row = projectsTable.appendTableRow();
+//         var cell = row.appendTableCell("Interviews");
+//         cell.setBold(true);
+//         cell
+//           .getChild(0)
+//           .asParagraph()
+//         .setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+//       cell.setBackgroundColor("#ADD8E6"); // Hex code for yellow
+
+//   //--------------------------------------Interview Table----------------------------------------
+
+
+//     var table = [['Online Interviews', 'Interview Score']];
+
+//     for (var j = 0; j < interview.length; j++) {
+//       // Ensure all values are converted to strings
+//       var interviewName = 'Interview ' + (j + 1); // Assuming project names are like "Project 1", "Project 2", etc.
+//       var interviewscore = interviewScore[j].toString(); // Convert score to string
+
+//       table.push([interviewName, interviewscore]);
+//     }
+
+
+//     let interviewTable = body.appendTable();
+  
+//       for (let i = 0; i < table.length; i++) {
+//         let row = interviewTable.appendTableRow();
+//         for (let j = 0; j < table[i].length; j++) {
+//           let cell = row.appendTableCell(table[i][j]);
+//           cell.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+//         }
+//       }
+
+// body.appendPageBreak();
+
+
+// *********************************EVALUATION SECTION****************************************************
+
+      // ---------------------------------EVALUATION TABLE HEADING---------------------------------------------
+
+      var evaluationTableHeader = body.appendTable();
+          var row = evaluationTableHeader.appendTableRow();
+          var cell = row.appendTableCell("Evaluation Details");
+          cell.setBold(true);
+          cell
+            .getChild(0)
+            .asParagraph()
+            .setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+          cell.setBackgroundColor("#ADD8E6");
+
+
+      // ------------------------------------EVALUTION TABLE-----------------------------------------------
+
+        var evaluationTableData = [
+            ["Evaluations", "Evaluations Date", "Evaluations Score"]
+          ];
+
+        var evaluationStaticNames=[];// using for creating charts 
+
+          for (let j = 0; j < evalNames.length; j++) {
+            // Ensure all values are converted to strings
+            let name = "Evaluation-"+(j+1); // name is likely already a string
+            evaluationStaticNames.push(name);
+            var score = evalScores[j]; // Convert score to string
+            var date = evalDates[j].toDateString(); // Convert date to string, assuming it might not be
+            evaluationTableData.push([name, date, score]);
+          }
+    // creating and displaying table
+          let evaluationTable = body.appendTable();
+           for (let i = 0; i < evaluationTableData.length; i++) {
+            let row = evaluationTable.appendTableRow();
+            for (let j = 0; j < evaluationTableData[i].length; j++) {
+              let cell = row.appendTableCell(evaluationTableData[i][j]);
+              cell.getChild(0).asParagraph().setAlignment(DocumentApp.HorizontalAlignment.CENTER); // Center align the text
+            }
+          }
+
+// body.appendPageBreak();
+
+// **************************************CHARTS SECTION*****************************************
+
+    var evaluationChartBlob = createEvaluationLineChart(evaluationStaticNames, evaluation, 'Evaluation Scores');
+    var combinedChartBlob = createCombinedLineChart(["Aug-23","Sep-23","Oct-23","Nov-23","Dec-23","Jan-24","Feb-24"], attendance, assignmentAttempted, assignmentSubmitted, 'Combined Data');
+
+    body.appendImage(evaluationChartBlob);
+    // body.appendPageBreak();
+    body.appendImage(combinedChartBlob);
+    
+    
+
+    // body.appendParagraph(discliamer);
+
+    
+//********************************* Add Footer***************************************************
+    addTimestampFooter(doc);
+
+    doc.saveAndClose();
+
+// ****************************Accessing Doc file and HTML file along with and creating PDF*********************
+
+    var docFile = DriveApp.getFileById(doc.getId());
+    var pdfBlob = docFile.getAs('application/pdf').setName('ReportCard-' + row0[headers.indexOf('name')] + '.pdf');
+
+    DriveApp.removeFile(docFile);
+    webSubfolder.createFile(pdfBlob);
+
+    var htmlContent = HtmlService.createHtmlOutputFromFile('template.html').getContent();
+
+// *************************************MAILING LOGIC SECTION**************************************************
+
+    if (MailApp.getRemainingDailyQuota() > 0) {
+      
+      var recipientName = row0[headers.indexOf('name')] || '';
+      var code = row0[headers.indexOf('student code')] || '';
+      var batchName = row0[headers.indexOf('batch')] || '';
+   
+     
+      var htmlContentWithDynamicValues = HtmlService.createHtmlOutputFromFile('template')
+  .getContent()
+  .replace('{{StudentName}}', recipientName)
+  .replace('{{StudentCode}}', code)
+  .replace('{{BatchName}}', batchName)
+  
+      try {
+        MailApp.sendEmail({
+          to: emailAddress,
+          cc: "supriya@test.com.com, om.prakash@test.com.com, abhishek.pandey@test.com.com, shubham.tripathi@test.com.com",
+          name: 'test by test School',
+          subject: 'Overall Progress Report',
+          htmlBody: htmlContentWithDynamicValues,
+          attachments: [pdfBlob]
+        });
+        sheet.getRange(i + 1, emailFlagIndex + 1).setValue(true);
+      } catch (error) {
+        sheet.getRange(i + 1, emailFlagIndex + 1).setValue(false);
+      }
+    } else {
+      sheet.getRange(i + 1, emailFlagIndex + 1).setValue(false);
+    }
+  }
+}
+
+function createOrGetFolder(parentFolder, folderName) {
+  var folders = parentFolder.getFoldersByName(folderName);
+  return folders.hasNext() ? folders.next() : parentFolder.createFolder(folderName);
+}
